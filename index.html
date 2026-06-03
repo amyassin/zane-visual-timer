@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Wait Timer">
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="manifest.json">
+  <title>Wait Timer</title>
+  <style>
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none; -webkit-user-select: none;
+    }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    /* ── Screens ── */
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 24px 16px 40px;
+      position: relative;
+    }
+    .screen.active { display: flex; }
+
+    /* ── Balls ── */
+    .balls-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+
+    .ball {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: #1a1a1a;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.1s ease;
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,0.25),
+                  inset 0 4px 8px rgba(255,255,255,0.35);
+    }
+    .ball:active { transform: scale(0.91); }
+
+    .ball.blue   { background: #5BA4E6; }
+    .ball.green  { background: #4DC26A; }
+    .ball.yellow { background: #F5C842; }
+    .ball.red    { background: #E85050; }
+
+    /* ── Dots ── */
+    .dots-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      justify-content: center;
+      max-width: 400px;
+      margin-bottom: 28px;
+    }
+
+    .dot {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #3a3a3a;
+      transition: background 0.25s ease;
+      flex-shrink: 0;
+    }
+    .dot.lit { background: #5BA4E6; }
+
+    /* ── Stop button ── */
+    .stop-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: 2.5px solid rgba(255,255,255,0.8);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+    .stop-btn:active { transform: scale(0.9); opacity: 0.7; }
+    .stop-btn svg { width: 20px; height: 20px; fill: rgba(255,255,255,0.9); }
+
+    /* ── Running screen large ball ── */
+    .run-ball {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      font-weight: 800;
+      color: #1a1a1a;
+      margin-bottom: 36px;
+      box-shadow: inset 0 -8px 16px rgba(0,0,0,0.25),
+                  inset 0 6px 12px rgba(255,255,255,0.35);
+    }
+
+    /* ── Done screen ── */
+    .done-bell {
+      font-size: 90px;
+      margin-bottom: 24px;
+      display: block;
+    }
+    .done-bell.ring {
+      animation: ring 0.4s ease-in-out 4;
+    }
+    @keyframes ring {
+      0%,100% { transform: rotate(0deg); }
+      25%      { transform: rotate(-18deg); }
+      75%      { transform: rotate(18deg); }
+    }
+
+    .done-label {
+      font-size: 32px;
+      font-weight: 300;
+      letter-spacing: 1px;
+      opacity: 0.9;
+    }
+
+    /* ── Settings button ── */
+    .gear-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      opacity: 0.65;
+      transition: opacity 0.2s;
+    }
+    .gear-btn:active { opacity: 1; }
+    .gear-btn svg { width: 26px; height: 26px; fill: #fff; display: block; }
+
+    /* ── Settings screen ── */
+    .settings-title {
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+      margin-bottom: 36px;
+      opacity: 0.75;
+    }
+
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 36px;
+      width: 280px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .setting-swatch {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: inset 0 -4px 8px rgba(0,0,0,0.25),
+                  inset 0 3px 6px rgba(255,255,255,0.3);
+    }
+
+    .setting-row label {
+      font-size: 14px;
+      opacity: 0.55;
+      width: 60px;
+    }
+
+    .setting-row input[type="number"] {
+      background: #1e1e1e;
+      border: 1px solid #444;
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 20px;
+      font-weight: 600;
+      width: 90px;
+      text-align: center;
+      outline: none;
+      -moz-appearance: textfield;
+    }
+    .setting-row input::-webkit-outer-spin-button,
+    .setting-row input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .setting-row input:focus { border-color: #5BA4E6; }
+
+    .setting-row .unit {
+      font-size: 14px;
+      opacity: 0.5;
+    }
+
+    .save-btn {
+      background: #5BA4E6;
+      color: #000;
+      border: none;
+      padding: 14px 44px;
+      border-radius: 28px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.15s;
+    }
+    .save-btn:active { opacity: 0.8; }
+
+    /* ── iOS home indicator spacer ── */
+    .home-bar {
+      position: absolute;
+      bottom: 8px;
+      width: 120px;
+      height: 4px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ HOME ══════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-home">
+  <button class="gear-btn" onclick="openSettings()" aria-label="Settings">
+    <svg viewBox="0 0 24 24">
+      <path d="M19.14 12.94c.04-.3.06-.61.06-.94
+               0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61
+               l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96
+               c-.5-.38-1.03-.7-1.62-.94L14.4 2.81
+               C14.36 2.57 14.16 2.4 13.92 2.4H10.08
+               c-.24 0-.43.17-.47.41L9.25 5.35
+               C8.66 5.59 8.12 5.92 7.63 6.29L5.24 5.33
+               c-.22-.08-.47 0-.59.22L2.74 8.87
+               c-.12.21-.08.47.12.61l2.03 1.58
+               C4.84 11.36 4.8 11.69 4.8 12
+               s.02.64.07.94l-2.03 1.58
+               c-.18.14-.23.41-.12.61l1.92 3.32
+               c.12.22.37.29.59.22l2.39-.96
+               c.5.38 1.03.7 1.62.94l.36 2.54
+               c.05.24.24.41.48.41h3.84
+               c.24 0 .44-.17.47-.41l.36-2.54
+               c.59-.24 1.13-.56 1.62-.94l2.39.96
+               c.22.08.47 0 .59-.22l1.92-3.32
+               c.12-.22.07-.47-.12-.61L19.14 12.94z
+               M12 15.6c-1.98 0-3.6-1.62-3.6-3.6
+               s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+    </svg>
+  </button>
+
+  <div class="balls-row" id="balls-row"></div>
+  <div class="dots-row" id="dots-home"></div>
+  <div class="home-bar"></div>
+</div>
+
+<!-- ══ RUNNING ════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-running">
+  <div class="run-ball" id="run-ball"></div>
+  <div class="dots-row" id="dots-running"></div>
+  <button class="stop-btn" onclick="stopTimer()" aria-label="Stop">
+    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2.5"/></svg>
+  </button>
+  <div class="home-bar"></div>
+</div>
+
+<!-- ══ DONE ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-done">
+  <span class="done-bell" id="done-bell">🔔</span>
+  <div class="done-label">All done!</div>
+  <div class="home-bar"></div>
+</div>
+
+<!-- ══ SETTINGS ═══════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-settings">
+  <div class="settings-title">Timer durations</div>
+  <div class="settings-list" id="settings-list"></div>
+  <button class="save-btn" onclick="saveSettings()">Save</button>
+  <div class="home-bar"></div>
+</div>
+
+<script>
+  /* ── Config ──────────────────────────────────────────────────────── */
+  const COLORS = ['blue', 'green', 'yellow', 'red'];
+  const COLOR_HEX = { blue:'#5BA4E6', green:'#4DC26A', yellow:'#F5C842', red:'#E85050' };
+  const DOT_COUNT = 20;
+
+  const DEFAULTS = [
+    { seconds: 10, color: 'blue'   },
+    { seconds: 20, color: 'green'  },
+    { seconds: 30, color: 'yellow' },
+    { seconds: 60, color: 'red'    },
+  ];
+
+  /* ── State ───────────────────────────────────────────────────────── */
+  let timers = loadTimers();
+  let rafId   = null;
+  let startMs = 0;
+  let totalMs = 0;
+  let activeColor = '';
+
+  /* ── Persistence ─────────────────────────────────────────────────── */
+  function loadTimers() {
+    try {
+      const s = localStorage.getItem('wt_timers');
+      if (s) {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+      }
+    } catch (_) {}
+    return DEFAULTS.map(t => ({ ...t }));
+  }
+
+  function saveTimers() {
+    try { localStorage.setItem('wt_timers', JSON.stringify(timers)); } catch (_) {}
+  }
+
+  /* ── Label helpers ───────────────────────────────────────────────── */
+  function fmtSecs(s) {
+    s = Math.round(s);
+    if (s < 60) return s + 's';
+    const m = Math.floor(s / 60), r = s % 60;
+    return r === 0 ? m + 'm' : m + 'm' + r + 's';
+  }
+
+  /* ── Dot helpers ─────────────────────────────────────────────────── */
+  function buildDots(containerId, litCount) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    for (let i = 0; i < DOT_COUNT; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i < litCount ? ' lit' : '');
+      el.appendChild(d);
+    }
+  }
+
+  function updateRunningDots(fraction) {
+    const litCount = Math.ceil(fraction * DOT_COUNT);
+    const dots = document.querySelectorAll('#dots-running .dot');
+    dots.forEach((d, i) => {
+      const shouldBeLit = i < litCount;
+      if (shouldBeLit !== d.classList.contains('lit')) {
+        shouldBeLit ? d.classList.add('lit') : d.classList.remove('lit');
+        d.style.background = shouldBeLit ? COLOR_HEX[activeColor] : '';
+      }
+    });
+  }
+
+  /* ── Screen switching ────────────────────────────────────────────── */
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+  }
+
+  /* ── Home ────────────────────────────────────────────────────────── */
+  function renderHome() {
+    const row = document.getElementById('balls-row');
+    row.innerHTML = timers.map((t, i) =>
+      `<div class="ball ${t.color}" onclick="startTimer(${i})" role="button" aria-label="${fmtSecs(t.seconds)}">${fmtSecs(t.seconds)}</div>`
+    ).join('');
+    buildDots('dots-home', 0);
+  }
+
+  /* ── Timer ───────────────────────────────────────────────────────── */
+  function startTimer(index) {
+    const t = timers[index];
+    activeColor = t.color;
+    totalMs = t.seconds * 1000;
+    startMs = performance.now();
+
+    const ball = document.getElementById('run-ball');
+    ball.className = 'run-ball ' + t.color;
+    ball.textContent = fmtSecs(t.seconds);
+
+    buildDots('dots-running', DOT_COUNT);
+    document.querySelectorAll('#dots-running .dot.lit').forEach(d => {
+      d.style.background = COLOR_HEX[activeColor];
+    });
+
+    showScreen('running');
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function tick(now) {
+    const elapsed = now - startMs;
+    const remaining = Math.max(0, totalMs - elapsed);
+    const fraction = remaining / totalMs;
+
+    updateRunningDots(fraction);
+
+    if (remaining <= 0) {
+      rafId = null;
+      showDone();
+      return;
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function stopTimer() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    showScreen('home');
+  }
+
+  /* ── Done ────────────────────────────────────────────────────────── */
+  function showDone() {
+    playBell();
+    showScreen('done');
+    const bell = document.getElementById('done-bell');
+    bell.classList.remove('ring');
+    void bell.offsetWidth; // reflow to restart animation
+    bell.classList.add('ring');
+    setTimeout(() => showScreen('home'), 3500);
+  }
+
+  /* ── Bell sound (Web Audio API) ──────────────────────────────────── */
+  function playBell() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      function tone(freq, t0, dur, vol) {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(vol, ctx.currentTime + t0);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t0 + dur);
+        osc.start(ctx.currentTime + t0);
+        osc.stop(ctx.currentTime + t0 + dur);
+      }
+      // Two ding strokes, each a chord of fundamental + upper partials
+      [0, 0.55].forEach(offset => {
+        tone(880,  offset,       2.4, 0.45);
+        tone(1109, offset,       2.0, 0.20);
+        tone(1318, offset,       1.6, 0.12);
+        tone(1760, offset,       1.2, 0.07);
+      });
+    } catch (_) {}
+  }
+
+  /* ── Settings ────────────────────────────────────────────────────── */
+  function openSettings() {
+    const list = document.getElementById('settings-list');
+    list.innerHTML = timers.map((t, i) => `
+      <div class="setting-row">
+        <div class="setting-swatch" style="background:${COLOR_HEX[t.color]}"></div>
+        <label>Button ${i + 1}</label>
+        <input type="number" id="si-${i}" value="${t.seconds}" min="1" max="3600" inputmode="numeric">
+        <span class="unit">sec</span>
+      </div>
+    `).join('');
+    showScreen('settings');
+  }
+
+  function saveSettings() {
+    timers = timers.map((t, i) => {
+      const raw = parseInt(document.getElementById('si-' + i).value, 10);
+      const seconds = (!isNaN(raw) && raw >= 1 && raw <= 3600) ? raw : t.seconds;
+      return { ...t, seconds };
+    });
+    saveTimers();
+    renderHome();
+    showScreen('home');
+  }
+
+  /* ── Init ────────────────────────────────────────────────────────── */
+  renderHome();
+
+  // Register service worker for PWA offline support
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
