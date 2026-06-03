@@ -251,89 +251,63 @@
       border-radius: 2px;
     }
 
-    /* ── Landscape: fill the screen (phones + tablets) ── */
-    @media (orientation: landscape) {
-      .screen { padding: 3vh 4vw; }
+    /* ── Always landscape ─────────────────────────────────────────────
+       --lw / --lh are the *landscape* width/height in px, set by JS.
+       When the device is portrait, <html> gets .rotate and we spin the
+       whole app 90° so it always presents in landscape.               */
+    :root { --lw: 100vw; --lh: 100vh; }
 
-      /* Home: large balls that fill the width */
-      .ball {
-        width: min(20vw, 34vh);
-        height: min(20vw, 34vh);
-        font-size: min(5.5vw, 9vh);
-      }
-      .balls-row { gap: min(4vw, 5vh); margin-bottom: min(3.5vh, 4vw); }
-      .balls-row:last-of-type { margin-bottom: 0; }
-
-      /* Running: big ball beside the dot grid */
-      #screen-running { flex-direction: row; gap: 6vw; }
-      .run-ball {
-        width: min(34vw, 64vh);
-        height: min(34vw, 64vh);
-        font-size: min(9vw, 17vh);
-        margin-bottom: 0;
-      }
-
-      /* Dot size/gap are computed in JS to fill the available space */
-      .dots-row  { gap: var(--dot-gap, 7px); margin-bottom: 0; }
-      .dots-line { gap: var(--dot-gap, 7px); }
-      .dot       { width: var(--dot-size, 15px); height: var(--dot-size, 15px); }
-
-      .stop-btn {
-        position: absolute;
-        bottom: 3vh;
-        left: 50%;
-        transform: translateX(-50%);
-        width: min(8vh, 9vw);
-        height: min(8vh, 9vw);
-      }
-      .stop-btn:active { transform: translateX(-50%) scale(0.9); opacity: 0.7; }
-      .stop-btn svg { width: 38%; height: 38%; }
-
-      .done-bell  { font-size: min(22vh, 22vw); margin-bottom: 3vh; }
-      .done-label { font-size: min(6vh, 7vw); }
-    }
-
-    /* ── Rotate-to-landscape hint (shown only when held in portrait) ── */
-    .rotate-hint {
-      display: none;
+    html.rotate { overflow: hidden; }
+    html.rotate body {
       position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: #000;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 22px;
-      text-align: center;
-      padding: 40px;
+      top: 0;
+      left: 0;
+      width: var(--lw);
+      height: var(--lh);
+      transform-origin: top left;
+      transform: translateX(var(--lh)) rotate(90deg);
     }
-    .rotate-hint .rotate-icon {
-      font-size: 84px;
-      transform-origin: center;
-      animation: rotateHint 2.4s ease-in-out infinite;
+
+    /* ── Fill the screen: sizes scale with the landscape dimensions ── */
+    .screen { padding: calc(var(--lh) * 0.03) calc(var(--lw) * 0.04); }
+
+    .ball {
+      width:  min(calc(var(--lw) * 0.20), calc(var(--lh) * 0.34));
+      height: min(calc(var(--lw) * 0.20), calc(var(--lh) * 0.34));
+      font-size: min(calc(var(--lw) * 0.055), calc(var(--lh) * 0.09));
     }
-    .rotate-hint .rotate-text {
-      font-size: 24px;
-      font-weight: 300;
-      letter-spacing: 0.5px;
-      opacity: 0.85;
+    .balls-row { gap: min(calc(var(--lw) * 0.04), calc(var(--lh) * 0.05)); margin-bottom: min(calc(var(--lh) * 0.035), calc(var(--lw) * 0.04)); }
+    .balls-row:last-of-type { margin-bottom: 0; }
+
+    #screen-running { flex-direction: row; gap: calc(var(--lw) * 0.06); }
+    .run-ball {
+      width:  min(calc(var(--lw) * 0.34), calc(var(--lh) * 0.64));
+      height: min(calc(var(--lw) * 0.34), calc(var(--lh) * 0.64));
+      font-size: min(calc(var(--lw) * 0.09), calc(var(--lh) * 0.17));
+      margin-bottom: 0;
     }
-    @keyframes rotateHint {
-      0%, 55%   { transform: rotate(0deg); }
-      80%, 100% { transform: rotate(-90deg); }
+
+    /* Dot size/gap computed in JS to fill the space next to the ball */
+    .dots-row  { gap: var(--dot-gap, 7px); margin-bottom: 0; }
+    .dots-line { gap: var(--dot-gap, 7px); }
+    .dot       { width: var(--dot-size, 15px); height: var(--dot-size, 15px); }
+
+    .stop-btn {
+      position: absolute;
+      bottom: calc(var(--lh) * 0.03);
+      left: 50%;
+      transform: translateX(-50%);
+      width:  min(calc(var(--lh) * 0.08), calc(var(--lw) * 0.09));
+      height: min(calc(var(--lh) * 0.08), calc(var(--lw) * 0.09));
     }
-    @media (orientation: portrait) {
-      .rotate-hint { display: flex; }
-    }
+    .stop-btn:active { transform: translateX(-50%) scale(0.9); opacity: 0.7; }
+    .stop-btn svg { width: 38%; height: 38%; }
+
+    .done-bell  { font-size: min(calc(var(--lh) * 0.22), calc(var(--lw) * 0.22)); margin-bottom: calc(var(--lh) * 0.03); }
+    .done-label { font-size: min(calc(var(--lh) * 0.06), calc(var(--lw) * 0.07)); }
   </style>
 </head>
 <body>
-
-<!-- ══ ROTATE HINT (portrait only) ════════════════════════════════════ -->
-<div class="rotate-hint">
-  <div class="rotate-icon">📱</div>
-  <div class="rotate-text">Turn sideways</div>
-</div>
 
 <!-- ══ HOME ══════════════════════════════════════════════════════════ -->
 <div class="screen active" id="screen-home">
@@ -482,16 +456,13 @@
   // In landscape, size the dot grid to fill the space next to the ball.
   function sizeDots(fieldCount) {
     const root = document.documentElement;
-    if (!window.matchMedia('(orientation: landscape)').matches) {
-      root.style.removeProperty('--dot-size');
-      root.style.removeProperty('--dot-gap');
-      return;
-    }
+    const lw = Math.max(window.innerWidth, window.innerHeight);  // landscape width
+    const lh = Math.min(window.innerWidth, window.innerHeight);  // landscape height
     const cols = Math.min(fieldCount, DOTS_PER_LINE) || 1;
     const rows = Math.ceil(fieldCount / DOTS_PER_LINE) || 1;
     const gapRatio = 0.5;
-    const boxW = window.innerWidth  * 0.48;  // dots take ~the right half (ball is on the left)
-    const boxH = window.innerHeight * 0.78;
+    const boxW = lw * 0.48;  // dots take ~the right half (ball is on the left)
+    const boxH = lh * 0.78;
     const byW = boxW / (cols + (cols - 1) * gapRatio);
     const byH = boxH / (rows + (rows - 1) * gapRatio);
     let dot = Math.max(8, Math.min(Math.min(byW, byH), 72));
@@ -634,13 +605,22 @@
     showScreen('home');
   }
 
-  /* ── Init ────────────────────────────────────────────────────────── */
-  renderHome();
+  /* ── Always-landscape layout ─────────────────────────────────────── */
+  function layout() {
+    const iw = window.innerWidth, ih = window.innerHeight;
+    const portrait = ih > iw;
+    const root = document.documentElement;
+    root.style.setProperty('--lw', (portrait ? ih : iw) + 'px');
+    root.style.setProperty('--lh', (portrait ? iw : ih) + 'px');
+    root.classList.toggle('rotate', portrait);
+    if (rafId) sizeDots(dotFieldCount);  // re-fit dots if a timer is running
+  }
 
-  // Re-fit the dot grid if the viewport changes while a timer is running
-  window.addEventListener('resize', () => {
-    if (rafId) sizeDots(dotFieldCount);
-  });
+  /* ── Init ────────────────────────────────────────────────────────── */
+  layout();
+  window.addEventListener('resize', layout);
+  window.addEventListener('orientationchange', layout);
+  renderHome();
 
   // Register service worker for PWA offline support
   if ('serviceWorker' in navigator) {
