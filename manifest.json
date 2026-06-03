@@ -1,6 +1,6 @@
 {
-  "name": "Wait Timer",
-  "short_name": "Wait Timer",
+  "name": "Zane Visual Timer",
+  "short_name": "Zane Visual Timer",
   "description": "Visual countdown timer with dot indicators",
   "start_url": "/",
   "display": "standalone",
