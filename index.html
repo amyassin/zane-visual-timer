@@ -75,11 +75,16 @@
     /* ── Dots ── */
     .dots-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 28px;
+    }
+
+    .dots-line {
+      display: flex;
       gap: 7px;
       justify-content: center;
-      max-width: 400px;
-      margin-bottom: 28px;
     }
 
     .dot {
@@ -310,7 +315,7 @@
   /* ── Config ──────────────────────────────────────────────────────── */
   const COLORS = ['blue', 'green', 'yellow', 'red'];
   const COLOR_HEX = { blue:'#5BA4E6', green:'#4DC26A', yellow:'#F5C842', red:'#E85050' };
-  const DOT_COUNT = 20;
+  const DOTS_PER_LINE = 10;
 
   const DEFAULTS = [
     { seconds: 10, color: 'blue'   },
@@ -325,6 +330,7 @@
   let startMs = 0;
   let totalMs = 0;
   let activeColor = '';
+  let dotCount = 0;
 
   /* ── Persistence ─────────────────────────────────────────────────── */
   function loadTimers() {
@@ -351,18 +357,24 @@
   }
 
   /* ── Dot helpers ─────────────────────────────────────────────────── */
-  function buildDots(containerId, litCount) {
+  function buildDots(containerId, totalDots, litCount) {
     const el = document.getElementById(containerId);
     el.innerHTML = '';
-    for (let i = 0; i < DOT_COUNT; i++) {
+    let line = null;
+    for (let i = 0; i < totalDots; i++) {
+      if (i % DOTS_PER_LINE === 0) {
+        line = document.createElement('div');
+        line.className = 'dots-line';
+        el.appendChild(line);
+      }
       const d = document.createElement('div');
       d.className = 'dot' + (i < litCount ? ' lit' : '');
-      el.appendChild(d);
+      line.appendChild(d);
     }
   }
 
   function updateRunningDots(fraction) {
-    const litCount = Math.ceil(fraction * DOT_COUNT);
+    const litCount = Math.ceil(fraction * dotCount);
     const dots = document.querySelectorAll('#dots-running .dot');
     dots.forEach((d, i) => {
       const shouldBeLit = i < litCount;
@@ -385,7 +397,7 @@
     row.innerHTML = timers.map((t, i) =>
       `<div class="ball ${t.color}" onclick="startTimer(${i})" role="button" aria-label="${fmtSecs(t.seconds)}">${fmtSecs(t.seconds)}</div>`
     ).join('');
-    buildDots('dots-home', 0);
+    buildDots('dots-home', 0, 0);
   }
 
   /* ── Timer ───────────────────────────────────────────────────────── */
@@ -394,12 +406,13 @@
     activeColor = t.color;
     totalMs = t.seconds * 1000;
     startMs = performance.now();
+    dotCount = t.seconds;
 
     const ball = document.getElementById('run-ball');
     ball.className = 'run-ball ' + t.color;
     ball.textContent = fmtSecs(t.seconds);
 
-    buildDots('dots-running', DOT_COUNT);
+    buildDots('dots-running', dotCount, dotCount);
     document.querySelectorAll('#dots-running .dot.lit').forEach(d => {
       d.style.background = COLOR_HEX[activeColor];
     });
