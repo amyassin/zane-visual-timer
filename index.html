@@ -399,6 +399,8 @@
   let activeColor = '';
   let dotLitMax = 0;
   let dotFieldCount = 0;
+  let lastTickSec = 0;
+  let audioCtx = null;
 
   /* ── Persistence ─────────────────────────────────────────────────── */
   function loadTimers() {
@@ -507,6 +509,8 @@
     startMs = performance.now();
     dotLitMax = litMax;
     dotFieldCount = fieldCount;
+    lastTickSec = 0;
+    getAudio();  // create/resume audio during the tap so ticks can play
 
     const ball = document.getElementById('run-ball');
     ball.className = 'run-ball ' + color;
@@ -526,15 +530,19 @@
   function tick(now) {
     const elapsed = now - startMs;
     const remaining = Math.max(0, totalMs - elapsed);
-    const fraction = remaining / totalMs;
 
-    updateRunningDots(fraction);
+    updateRunningDots(remaining / totalMs);
 
     if (remaining <= 0) {
       rafId = null;
       showDone();
       return;
     }
+
+    // One tick per real second, regardless of seconds- vs minutes-timer.
+    const sec = Math.floor(elapsed / 1000);
+    if (sec > lastTickSec) { lastTickSec = sec; playTick(); }
+
     rafId = requestAnimationFrame(tick);
   }
 
@@ -555,29 +563,55 @@
   }
 
   /* ── Bell sound (Web Audio API) ──────────────────────────────────── */
-  function playBell() {
+  // Shared AudioContext — created/resumed on a user gesture (timer start).
+  function getAudio() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      function tone(freq, t0, dur, vol) {
-        const osc  = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(vol, ctx.currentTime + t0);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t0 + dur);
-        osc.start(ctx.currentTime + t0);
-        osc.stop(ctx.currentTime + t0 + dur);
-      }
-      // Two ding strokes, each a chord of fundamental + upper partials
-      [0, 0.55].forEach(offset => {
-        tone(880,  offset,       2.4, 0.45);
-        tone(1109, offset,       2.0, 0.20);
-        tone(1318, offset,       1.6, 0.12);
-        tone(1760, offset,       1.2, 0.07);
-      });
-    } catch (_) {}
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (_) { audioCtx = null; }
+    return audioCtx;
+  }
+
+  // Short clock-style tick.
+  function playTick() {
+    const ctx = getAudio();
+    if (!ctx) return;
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.value = 1500;
+    const t0 = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+    osc.start(t0);
+    osc.stop(t0 + 0.06);
+  }
+
+  function playBell() {
+    const ctx = getAudio();
+    if (!ctx) return;
+    function tone(freq, t0, dur, vol) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, ctx.currentTime + t0);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t0 + dur);
+      osc.start(ctx.currentTime + t0);
+      osc.stop(ctx.currentTime + t0 + dur);
+    }
+    // Two ding strokes, each a chord of fundamental + upper partials
+    [0, 0.55].forEach(offset => {
+      tone(880,  offset,       2.4, 0.45);
+      tone(1109, offset,       2.0, 0.20);
+      tone(1318, offset,       1.6, 0.12);
+      tone(1760, offset,       1.2, 0.07);
+    });
   }
 
   /* ── Settings ────────────────────────────────────────────────────── */
