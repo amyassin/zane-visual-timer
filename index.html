@@ -251,24 +251,46 @@
       border-radius: 2px;
     }
 
-    /* ── Landscape on phones: tighten so everything fits a short viewport ── */
-    @media (orientation: landscape) and (max-height: 500px) {
-      .screen { padding: 12px 16px; }
+    /* ── Landscape: fill the screen (phones + tablets) ── */
+    @media (orientation: landscape) {
+      .screen { padding: 3vh 4vw; }
 
-      .ball { width: 74px; height: 74px; font-size: 19px; }
-      .balls-row { margin-bottom: 10px; }
-      .balls-row:last-of-type { margin-bottom: 18px; }
+      /* Home: large balls that fill the width */
+      .ball {
+        width: min(20vw, 34vh);
+        height: min(20vw, 34vh);
+        font-size: min(5.5vw, 9vh);
+      }
+      .balls-row { gap: min(4vw, 5vh); margin-bottom: min(3.5vh, 4vw); }
+      .balls-row:last-of-type { margin-bottom: 0; }
 
-      .run-ball { width: 96px; height: 96px; font-size: 30px; margin-bottom: 14px; }
+      /* Running: big ball beside the dot grid */
+      #screen-running { flex-direction: row; gap: 6vw; }
+      .run-ball {
+        width: min(34vw, 64vh);
+        height: min(34vw, 64vh);
+        font-size: min(9vw, 17vh);
+        margin-bottom: 0;
+      }
 
-      .dots-row { gap: 6px; margin-bottom: 14px; }
-      .dots-line { gap: 6px; }
-      .dot { width: 13px; height: 13px; }
+      /* Dot size/gap are computed in JS to fill the available space */
+      .dots-row  { gap: var(--dot-gap, 7px); margin-bottom: 0; }
+      .dots-line { gap: var(--dot-gap, 7px); }
+      .dot       { width: var(--dot-size, 15px); height: var(--dot-size, 15px); }
 
-      .stop-btn { width: 46px; height: 46px; }
+      .stop-btn {
+        position: absolute;
+        bottom: 3vh;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(8vh, 9vw);
+        height: min(8vh, 9vw);
+      }
+      .stop-btn:active { transform: translateX(-50%) scale(0.9); opacity: 0.7; }
+      .stop-btn svg { width: 38%; height: 38%; }
 
-      .done-bell { font-size: 64px; margin-bottom: 16px; }
-      .done-label { font-size: 26px; }
+      .done-bell  { font-size: min(22vh, 22vw); margin-bottom: 3vh; }
+      .done-label { font-size: min(6vh, 7vw); }
     }
 
     /* ── Rotate-to-landscape hint (shown only when held in portrait) ── */
@@ -402,6 +424,7 @@
   let totalMs = 0;
   let activeColor = '';
   let dotLitMax = 0;
+  let dotFieldCount = 0;
 
   /* ── Persistence ─────────────────────────────────────────────────── */
   function loadTimers() {
@@ -456,6 +479,26 @@
     });
   }
 
+  // In landscape, size the dot grid to fill the space next to the ball.
+  function sizeDots(fieldCount) {
+    const root = document.documentElement;
+    if (!window.matchMedia('(orientation: landscape)').matches) {
+      root.style.removeProperty('--dot-size');
+      root.style.removeProperty('--dot-gap');
+      return;
+    }
+    const cols = Math.min(fieldCount, DOTS_PER_LINE) || 1;
+    const rows = Math.ceil(fieldCount / DOTS_PER_LINE) || 1;
+    const gapRatio = 0.5;
+    const boxW = window.innerWidth  * 0.48;  // dots take ~the right half (ball is on the left)
+    const boxH = window.innerHeight * 0.78;
+    const byW = boxW / (cols + (cols - 1) * gapRatio);
+    const byH = boxH / (rows + (rows - 1) * gapRatio);
+    let dot = Math.max(8, Math.min(Math.min(byW, byH), 72));
+    root.style.setProperty('--dot-size', dot.toFixed(1) + 'px');
+    root.style.setProperty('--dot-gap', (dot * gapRatio).toFixed(1) + 'px');
+  }
+
   /* ── Screen switching ────────────────────────────────────────────── */
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -492,6 +535,7 @@
     totalMs = totalSeconds * 1000;
     startMs = performance.now();
     dotLitMax = litMax;
+    dotFieldCount = fieldCount;
 
     const ball = document.getElementById('run-ball');
     ball.className = 'run-ball ' + color;
@@ -501,6 +545,7 @@
     document.querySelectorAll('#dots-running .dot.lit').forEach(d => {
       d.style.background = COLOR_HEX[activeColor];
     });
+    sizeDots(fieldCount);
 
     showScreen('running');
     if (rafId) cancelAnimationFrame(rafId);
@@ -591,6 +636,11 @@
 
   /* ── Init ────────────────────────────────────────────────────────── */
   renderHome();
+
+  // Re-fit the dot grid if the viewport changes while a timer is running
+  window.addEventListener('resize', () => {
+    if (rafId) sizeDots(dotFieldCount);
+  });
 
   // Register service worker for PWA offline support
   if ('serviceWorker' in navigator) {
