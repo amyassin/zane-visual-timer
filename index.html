@@ -46,8 +46,9 @@
     .balls-row {
       display: flex;
       gap: 10px;
-      margin-bottom: 36px;
+      margin-bottom: 16px;
     }
+    .balls-row:last-of-type { margin-bottom: 36px; }
 
     .ball {
       width: 88px;
@@ -282,6 +283,7 @@
   </button>
 
   <div class="balls-row" id="balls-row"></div>
+  <div class="balls-row" id="balls-row-min"></div>
   <div class="dots-row" id="dots-home"></div>
   <div class="home-bar"></div>
 </div>
@@ -324,13 +326,23 @@
     { seconds: 60, color: 'red'    },
   ];
 
+  // Minute timers: one dot per minute, shown on a fixed field of 20 grey dots
+  const MINUTE_DEFAULTS = [
+    { minutes: 5,  color: 'blue'   },
+    { minutes: 10, color: 'green'  },
+    { minutes: 15, color: 'yellow' },
+    { minutes: 20, color: 'red'    },
+  ];
+  const MINUTE_FIELD = 20;
+
   /* ── State ───────────────────────────────────────────────────────── */
   let timers = loadTimers();
+  let minuteTimers = MINUTE_DEFAULTS.map(t => ({ ...t }));
   let rafId   = null;
   let startMs = 0;
   let totalMs = 0;
   let activeColor = '';
-  let dotCount = 0;
+  let dotLitMax = 0;
 
   /* ── Persistence ─────────────────────────────────────────────────── */
   function loadTimers() {
@@ -374,7 +386,7 @@
   }
 
   function updateRunningDots(fraction) {
-    const litCount = Math.ceil(fraction * dotCount);
+    const litCount = Math.ceil(fraction * dotLitMax);
     const dots = document.querySelectorAll('#dots-running .dot');
     dots.forEach((d, i) => {
       const shouldBeLit = i < litCount;
@@ -393,26 +405,40 @@
 
   /* ── Home ────────────────────────────────────────────────────────── */
   function renderHome() {
-    const row = document.getElementById('balls-row');
-    row.innerHTML = timers.map((t, i) =>
+    document.getElementById('balls-row').innerHTML = timers.map((t, i) =>
       `<div class="ball ${t.color}" onclick="startTimer(${i})" role="button" aria-label="${fmtSecs(t.seconds)}">${fmtSecs(t.seconds)}</div>`
+    ).join('');
+    document.getElementById('balls-row-min').innerHTML = minuteTimers.map((t, i) =>
+      `<div class="ball ${t.color}" onclick="startMinuteTimer(${i})" role="button" aria-label="${t.minutes} minutes">${t.minutes}m</div>`
     ).join('');
     buildDots('dots-home', 0, 0);
   }
 
   /* ── Timer ───────────────────────────────────────────────────────── */
   function startTimer(index) {
+    // Seconds timer: one dot per second, field size = seconds.
     const t = timers[index];
-    activeColor = t.color;
-    totalMs = t.seconds * 1000;
+    run(t.seconds, t.color, t.seconds, t.seconds, fmtSecs(t.seconds));
+  }
+
+  function startMinuteTimer(index) {
+    // Minute timer: one dot per minute on a fixed field of 20 grey dots;
+    // the choice colors `minutes` of them.
+    const t = minuteTimers[index];
+    run(t.minutes * 60, t.color, MINUTE_FIELD, t.minutes, t.minutes + 'm');
+  }
+
+  function run(totalSeconds, color, fieldCount, litMax, label) {
+    activeColor = color;
+    totalMs = totalSeconds * 1000;
     startMs = performance.now();
-    dotCount = t.seconds;
+    dotLitMax = litMax;
 
     const ball = document.getElementById('run-ball');
-    ball.className = 'run-ball ' + t.color;
-    ball.textContent = fmtSecs(t.seconds);
+    ball.className = 'run-ball ' + color;
+    ball.textContent = label;
 
-    buildDots('dots-running', dotCount, dotCount);
+    buildDots('dots-running', fieldCount, litMax);
     document.querySelectorAll('#dots-running .dot.lit').forEach(d => {
       d.style.background = COLOR_HEX[activeColor];
     });
