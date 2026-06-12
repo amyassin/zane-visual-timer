@@ -1,4 +1,4 @@
-const CACHE = 'wait-timer-v2';
+const CACHE = 'wait-timer-v3';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/sw.js'];
 
 self.addEventListener('install', e => {
